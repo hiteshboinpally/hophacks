@@ -1,9 +1,12 @@
 
+
 'use strict';
 
 const express = require('express');
 const mysql = require('promise-mysql');
 const bodyParser = require('body-parser');
+const fetch = require('node-fetch');
+const geo = require('spherical-geometry-js');
 
 const app = express();
 app.set('view engine', 'pug');
@@ -146,6 +149,47 @@ app.get('/getAllNums', async (req, res) => {
         res.status(500).send(SERVER_ERR_MSG);
     }
 });
+
+app.get('/calculateEmissions', async (req, res) => {
+    try {
+        const route = await findRoute();
+        const stepDistances = [];
+        const stepStart = [];
+        const stepEnd = [];
+        const steps = route.routes[0].legs[0].steps;
+        for(let i = 0; i<steps.length; i++){
+            const step = steps[i];
+            stepDistances[i] = step.distance.text;
+            stepStart[i] = step.start_location;
+            stepEnd[i] = step.end_location;
+        }
+        determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
+        res.status(200).json(route);
+
+    } catch(err) {
+        console.log(err.stack);
+        res.status(500).send(SERVER_ERR_MSG);
+    }
+});
+
+
+async function findRoute(){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=API_KEY_HERE");
+    return response.json();
+}
+
+function determineFuelingCoordinates(stepDistances, stepStart, stepEnd){
+    const refillDist = 36960; //testing  with 7 miles as point to refuel (measured right now in ft -- smallest unit on maps for distance)
+    let distanceWithoutFuel = 0;
+    for(let i = 0;i<stepDistances.length;i++){
+        if(distanceWithoutFuel + stepDistances[i] >= refillDist){
+            const heading = geo.computeHeading(stepStart[i],stepEnd[i]);
+            const fillPosition = geo.computeOffset(stepStart[i], stepDistances[i]-distanceWithoutFuel,heading);
+        }
+        distanceWithoutFuel += stepDistances[i];
+    }
+
+}
 
 
 
