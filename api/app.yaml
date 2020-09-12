@@ -1,0 +1,10 @@
+runtime: nodejs10
+
+# The following env variables may contain sensitive information that grants
+# anyone access to your database. Do not add this file to your source control.
+env_variables:
+  DB_USER: accessDB
+  DB_PASS: 3l3ctr!c4Lyfe
+  DB_NAME: testingDB
+  DB_HOST: 34.105.89.30
+  CLOUD_SQL_CONNECTION_NAME: amplified-ward-289301:us-west1:electric-vs-gas-data
