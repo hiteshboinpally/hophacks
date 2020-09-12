@@ -67,9 +67,8 @@ class App extends Component {
     render(){
 
       return (
-
         <div className="App">
-          <div className="top">
+          <div>
             <h1>
               Vehicle Finder
             </h1>
