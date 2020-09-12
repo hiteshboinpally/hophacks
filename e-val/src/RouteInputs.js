@@ -1,51 +1,82 @@
 import React, {ReactDOM, Component} from 'react';
 import './App.css';
 
+const publicUrl = "https://amplified-ward-289301.wl.r.appspot.com/";
+const localUrl = "localhost:8080";
+
 class RouteInputs extends Component {
     constructor(props) {
         super(props);
 
         this.state = {
-            form: {
-                oCity: '',
-                dCity: '',
-                oAdd: '',
-                dAdd: '',
-                oState: '',
-                dState: '',
-                oZip: '',
-                dZip: ''
-            }
+            oCity: '',
+            dCity: '',
+            oAdd: '',
+            dAdd: '',
+            oState: '',
+            dState: '',
+            oZip: '',
+            dZip: '',
+            showErrText: "hidden"
         };
 
         this.errText = React.createRef();
     }
 
     onChange = (e) => {
-        let input = e.target.name;
-        // this.setState({ [.input] : e.target.value });
-        console.log(this.state);
+        this.setState({ [e.target.name] : e.target.value });
+        // console.log(this.state);
     }
 
     handleSubmit = (e) => {
-        console.log(this.state);
+        // console.log(this.state);
+        let noError = true;
         Object.keys(this.state).map((item) => {
-            if (this.state[item] == '') {
-                console.log(this.errText);
-                this.errText.classList.remove('hidden');
-                return;
-            }
-        });
-        let origin = "";
-        let dest = "";
+                if ("" + item !== "showErrText") {
+                    // console.log("current item", item);
+                    if (this.state[item] == '') {
+                        // console.log("error in", item);
+                        this.setState({ showErrText : "show" });
+                        noError = false;
+                    }
+                }
+            });
+        // console.log(this.state);
+        if (noError) {
+            console.log("here");
+            this.setState({ showErrText : "hidden" });
+            let origin = this.state.oAdd + " " + this.state.oCity + " " + this.state.oState +
+                         " " + this.state.oZip;
+            console.log("origin", origin);
+            origin = encodeURIComponent(origin);
+            console.log("encoded origin", origin);
+
+            let dest = this.state.dAdd + " " + this.state.dCity + " " + this.state.dState +
+                       " " + this.state.dZip;
+            console.log("dest", dest);
+            dest = encodeURIComponent(dest);
+            console.log("encoded dest", dest);
+
+            let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + origin +
+                      "&destination=" + dest + "&key=sneaky"
+
+            console.log('url', url);
+            fetch()
+                .then(resp => resp.json)
+                .then((data) => {console.log("this is data", data)})
+                .catch(err => console.log(err))
+        }
     }
 
-    id(elemId) {
-        return ReactDOM.getElementById(elemId);
+    toggleErrTxt() {
+        if (!this.state.showErrText) {
+            return "hidden";
+        }
     }
 
     render() {
         //refers to the dropdown for possible short building names so more information can be gathered
+        const { showErrText } = this.state;
         return (
             <div>
 
@@ -114,7 +145,7 @@ class RouteInputs extends Component {
                     </div>
                 </div>
                 <button id="submit" onClick={this.handleSubmit}>Find Route</button>
-                <p id="error-txt" className={this.state.errText}>Looks like something has not been filld in properly!</p>
+                <p id="error-txt" className={showErrText}>Looks like something has not been filld in properly!</p>
             </div>
         );
     }
