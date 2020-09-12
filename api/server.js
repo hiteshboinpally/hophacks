@@ -174,7 +174,7 @@ app.get('/calculateEmissions', async (req, res) => {
 
 
 async function findRoute(){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=API_KEY_HERE");
     return response.json();
 }
 
