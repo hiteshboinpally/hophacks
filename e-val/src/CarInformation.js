@@ -9,9 +9,9 @@ class CarInformation extends Component {
         return (
             <div
                 className = "vehicle-drop"
-                style = {{
-                    width: 250,
-                }}
+                // style = {{
+                //     width: 250,
+                // }}
             >
                 <p align = "center">
                     <Select

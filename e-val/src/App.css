@@ -40,14 +40,11 @@ h1{
   justify-content: space-between;
 }
 
-#vehicle1{
-  length: 500px;
+#vehicle1, #vehicle2 {
+  width: 250px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
-
-#vehicle2{
-  length: 500px;
-}
-
 
 @keyframes App-logo-spin {
   from {
