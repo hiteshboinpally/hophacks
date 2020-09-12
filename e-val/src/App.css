@@ -35,6 +35,20 @@ h1{
   color: #61dafb;
 }
 
+.vehicle-drop {
+  display: flex;
+  justify-content: space-between;
+}
+
+#vehicle1{
+  length: 500px;
+}
+
+#vehicle2{
+  length: 500px;
+}
+
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
