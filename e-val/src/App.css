@@ -35,15 +35,18 @@ h1{
   color: #61dafb;
 }
 
-.vehicle-drop {
+.vehicle-drop,.route-input{
   display: flex;
   justify-content: space-between;
 }
 
-#vehicle1, #vehicle2 {
-  width: 250px;
+#vehicle1, #vehicle2, .route-origin, .route-destination{
   margin-left: 10px;
   margin-right: 10px;
+}
+
+#vehicle1, #vehicle2{
+  width: 250px;
 }
 
 @keyframes App-logo-spin {
