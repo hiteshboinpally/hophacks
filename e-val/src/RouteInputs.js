@@ -2,7 +2,7 @@ import React, {ReactDOM, Component} from 'react';
 import './App.css';
 
 const publicUrl = "https://amplified-ward-289301.wl.r.appspot.com/";
-const localUrl = "localhost:8080";
+const localUrl = "http://localhost:8080/";
 
 class RouteInputs extends Component {
     constructor(props) {
@@ -32,9 +32,9 @@ class RouteInputs extends Component {
         // console.log(this.state);
         let noError = true;
         Object.keys(this.state).map((item) => {
-                if ("" + item !== "showErrText") {
+                if (("" + item) !== "showErrText") {
                     // console.log("current item", item);
-                    if (this.state[item] == '') {
+                    if (this.state[item] === '') {
                         // console.log("error in", item);
                         this.setState({ showErrText : "show" });
                         noError = false;
@@ -61,10 +61,16 @@ class RouteInputs extends Component {
                       "&destination=" + dest + "&key=sneaky"
 
             console.log('url', url);
-            fetch()
-                .then(resp => resp.json)
-                .then((data) => {console.log("this is data", data)})
+            let finalResult = "broken";
+
+            fetch(localUrl + "calculateEmissions")
+                .then(resp => resp.json())
+                .then((data) => {
+                    console.log(data);
+                })
                 .catch(err => console.log(err))
+
+            console.log(finalResult);
         }
     }
 

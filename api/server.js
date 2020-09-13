@@ -88,7 +88,7 @@ const createPool = async () => {
   } else {
     return await createUnixSocketPool(config);
   }
-    
+
 };
 // [END cloud_sql_mysql_mysql_create]
 
@@ -152,11 +152,13 @@ app.get('/getAllNums', async (req, res) => {
 
 app.get('/calculateEmissions', async (req, res) => {
     try {
+        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
         const route = await findRoute();
         const stepDistances = [];
         const stepStart = [];
         const stepEnd = [];
         const steps = route.routes[0].legs[0].steps;
+
         for(let i = 0; i<steps.length; i++){
             const step = steps[i];
             stepDistances[i] = step.distance.text;
@@ -165,7 +167,6 @@ app.get('/calculateEmissions', async (req, res) => {
         }
         determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
         res.status(200).json(route);
-
     } catch(err) {
         console.log(err.stack);
         res.status(500).send(SERVER_ERR_MSG);
@@ -174,7 +175,7 @@ app.get('/calculateEmissions', async (req, res) => {
 
 
 async function findRoute(){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=API_KEY_HERE");
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
     return response.json();
 }
 
