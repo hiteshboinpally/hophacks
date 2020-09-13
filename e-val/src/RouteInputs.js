@@ -20,13 +20,12 @@ class RouteInputs extends Component {
             showErrText: "hidden"
         };
 
-        this.errText = React.createRef();
     }
 
     onChange = (e) => {
         this.setState({ [e.target.name] : e.target.value });
         // console.log(this.state);
-    }
+    };
 
     handleSubmit = (e) => {
         // console.log(this.state);
@@ -117,7 +116,7 @@ class RouteInputs extends Component {
                         />
                         <br />
 
-                        <label htmlFor="oState">State:</label>
+                        <label htmlFor="oState">State (Abb.):</label>
                         <input
                             type="text"
                             id="oState"
@@ -145,7 +144,7 @@ class RouteInputs extends Component {
                             <input type="text" id="dCity" name="dCity" value={this.state.firstName} onChange={this.onChange} />
                             <br />
 
-                            <label htmlFor="dState">State:</label>
+                            <label htmlFor="dState">State (Abb.):</label>
                             <input
                                 type="text"
                                 id="dState"
@@ -161,8 +160,8 @@ class RouteInputs extends Component {
                             <br />
                     </div>
                 </div>
-                <button id="submit" onClick={this.handleSubmit}>Find Route</button>
-                <p id="error-txt" className={showErrText}>Looks like something has not been filld in properly!</p>
+                <button id="submit" onClick={this.handleSubmit}>Calculate Emissions on Route</button>
+                <p id="error-txt" className={showErrText}>Looks like something has not been filled in properly!</p>
             </div>
         );
     }
