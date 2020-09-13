@@ -1,51 +1,99 @@
 import React, {ReactDOM, Component} from 'react';
 import './App.css';
 
+const publicUrl = "https://amplified-ward-289301.wl.r.appspot.com/";
+const localUrl = "http://localhost:8080/";
+
 class RouteInputs extends Component {
     constructor(props) {
         super(props);
 
         this.state = {
-            form: {
-                oCity: '',
-                dCity: '',
-                oAdd: '',
-                dAdd: '',
-                oState: '',
-                dState: '',
-                oZip: '',
-                dZip: ''
-            }
+            oCity: '',
+            dCity: '',
+            oAdd: '',
+            dAdd: '',
+            oState: '',
+            dState: '',
+            oZip: '',
+            dZip: '',
+            showErrText: "hidden"
         };
 
         this.errText = React.createRef();
     }
 
     onChange = (e) => {
-        let input = e.target.name;
-        // this.setState({ [.input] : e.target.value });
-        console.log(this.state);
+        this.setState({ [e.target.name] : e.target.value });
+        // console.log(this.state);
     }
 
     handleSubmit = (e) => {
-        console.log(this.state);
+        // console.log(this.state);
+        let noError = true;
         Object.keys(this.state).map((item) => {
-            if (this.state[item] == '') {
-                console.log(this.errText);
-                this.errText.classList.remove('hidden');
-                return;
-            }
-        });
-        let origin = "";
-        let dest = "";
+                if (("" + item) !== "showErrText") {
+                    // console.log("current item", item);
+                    if (this.state[item] === '') {
+                        // console.log("error in", item);
+                        this.setState({ showErrText : "show" });
+                        noError = false;
+                    }
+                }
+            });
+        // console.log(this.state);
+        if (noError) {
+            console.log("here");
+            this.setState({ showErrText : "hidden" });
+            let originLoc = this.state.oAdd + " " + this.state.oCity + " " + this.state.oState +
+                         " " + this.state.oZip;
+            originLoc = encodeURIComponent(originLoc);
+
+            let destLoc = this.state.dAdd + " " + this.state.dCity + " " + this.state.dState +
+                       " " + this.state.dZip;
+            destLoc = encodeURIComponent(destLoc);
+
+            let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + originLoc +
+                      "&destination=" + destLoc + "&key=sneaky"
+
+            console.log('url', url);
+
+            let params = new FormData();
+            params.append("origin", originLoc);
+            params.append("dest", destLoc);
+
+            console.log("data exists:", params);
+
+            fetch(localUrl + "calculateEmissions",
+            {
+                method: 'POST',
+                body: params
+            })
+                .then(this.checkStatus)
+                .then(resp => resp.json())
+                .then(data => {console.log("data", data)})
+                .catch(console.error);
+        }
     }
 
-    id(elemId) {
-        return ReactDOM.getElementById(elemId);
+    checkStatus(response) {
+        console.log("response!", response)
+        if (response.ok) {
+            return response;
+        } else {
+            throw Error('Error in request: ' + response.statusText);
+        }
+    }
+
+    toggleErrTxt() {
+        if (!this.state.showErrText) {
+            return "hidden";
+        }
     }
 
     render() {
         //refers to the dropdown for possible short building names so more information can be gathered
+        const { showErrText } = this.state;
         return (
             <div>
 
@@ -114,7 +162,7 @@ class RouteInputs extends Component {
                     </div>
                 </div>
                 <button id="submit" onClick={this.handleSubmit}>Find Route</button>
-                <p id="error-txt" className={this.state.errText}>Looks like something has not been filld in properly!</p>
+                <p id="error-txt" className={showErrText}>Looks like something has not been filld in properly!</p>
             </div>
         );
     }
