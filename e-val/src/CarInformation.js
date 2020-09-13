@@ -16,7 +16,7 @@ class CarInformation extends Component {
                 <p align = "center">
                     <Select
                         id = "vehicle1"
-                        placeholder = "Select Vehicle #1"
+                        placeholder = "Tesla"
                         value = {this.props.valueBuild}
                         onChange = {this.props.onGetInfo}
                     />
@@ -24,7 +24,7 @@ class CarInformation extends Component {
                 <p align = "center">
                     <Select
                         id = "vehicle2"
-                        placeholder = "Select Vehicle #2"
+                        placeholder = "Nissan"
                         value = {this.props.valueBuild}
                         onChange = {this.props.onGetInfo}
                     />
