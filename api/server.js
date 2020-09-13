@@ -197,6 +197,17 @@ app.get('/calculateEmissions', async (req, res) => {
 });
 */
 
+app.get('/getCarList', async (req, res) => {
+    try {
+        const allCars = await pool.query("SELECT make, model, year FROM `vehicles`");
+        console.log(allCars);
+        res.status(200).json(allCars);
+    } catch(err) {
+        console.log(err.stack);
+        res.status(500).send(SERVER_ERR_MSG);
+    }
+});
+
 app.post('/calculateEmissions', async (req, res) => {
     try {
         const route = await findRoute(req.body.origin, req.body.dest);

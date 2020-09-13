@@ -20,13 +20,12 @@ class RouteInputs extends Component {
             showErrText: "hidden"
         };
 
-        this.errText = React.createRef();
     }
 
     onChange = (e) => {
         this.setState({ [e.target.name] : e.target.value });
         // console.log(this.state);
-    }
+    };
 
     handleSubmit = (e) => {
         // console.log(this.state);

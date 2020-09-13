@@ -1,8 +1,9 @@
 import React, {Component} from 'react';
-import logo from './logo.svg';
 import Select from "react-select";
 import './App.css';
 
+const publicUrl = "https://amplified-ward-289301.wl.r.appspot.com/";
+const localUrl = "http://localhost:8080/";
 class CarInformation extends Component {
     render() {
         //refers to the dropdown for possible short building names so more information can be gathered
@@ -15,18 +16,18 @@ class CarInformation extends Component {
             >
                 <p align = "center">
                     <Select
+                        options = {this.props.vehicles.map(t=>({value: t, label: t}))}
                         id = "vehicle1"
                         placeholder = "Select Vehicle #1"
-                        value = {this.props.valueBuild}
-                        onChange = {this.props.onGetInfo}
+                        onChange = {this.props.onSelectOne}
                     />
                 </p>
                 <p align = "center">
                     <Select
+                        options = {this.props.vehicles.map(t=>({value: t, label: t}))}
                         id = "vehicle2"
                         placeholder = "Select Vehicle #2"
-                        value = {this.props.valueBuild}
-                        onChange = {this.props.onGetInfo}
+                        onChange = {this.props.onSelectTwo}
                     />
                 </p>
             </div>
