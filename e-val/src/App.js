@@ -42,7 +42,7 @@ class App extends Component {
         <div className="App">
           <div>
             <h1>
-              Vehicle
+              EV-GAS
             </h1>
           </div>
           <link href="https://fonts.googleapis.com/css?family=Be+Vietnam|Nunito|Quicksand&display=swap"

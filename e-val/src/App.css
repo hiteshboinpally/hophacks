@@ -26,7 +26,7 @@ h1{
   align-items: center;
   justify-content: flex-start;
   font-size: calc(10px + 2vmin);
-  color: white;
+  color: cadetblue;
 }
 
 .App-link {
