@@ -5,7 +5,6 @@
 const multer = require('multer');
 const express = require('express');
 const mysql = require('promise-mysql');
-const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const geo = require('spherical-geometry-js');
 
@@ -16,87 +15,27 @@ app.use(express.static('public'));
 app.set('view engine', 'pug');
 app.enable('trust proxy');
 
-// Automatically parse request body as form data.
-// app.use(bodyParser.urlencoded({extended: true}));
-
 const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!"
 
-// [START cloud_sql_mysql_mysql_create_tcp]
-const createTcpPool = async (config) => {
-  // Extract host and port from socket address
-  const dbSocketAddr = process.env.DB_HOST.split(":")
-  console.log("line22", dbSocketAddr);
 
-  // Establish a connection to the database
-  return await mysql.createPool({
-    user: process.env.DB_USER, // e.g. 'my-db-user'
-    password: process.env.DB_PASS, // e.g. 'my-db-password'
-    database: process.env.DB_NAME, // e.g. 'my-database'
-    host: dbSocketAddr[0], // e.g. '127.0.0.1'
-    port: dbSocketAddr[1], // e.g. '3306'
-    // ... Specify additional properties here.
-    ...config
-  });
-}
-// [END cloud_sql_mysql_mysql_create_tcp]
-
-// [START cloud_sql_mysql_mysql_create_socket]
 const createUnixSocketPool = async (config) => {
-  const dbSocketPath = process.env.DB_SOCKET_PATH || "/cloudsql"
+    const dbSocketPath = process.env.DB_SOCKET_PATH || "/cloudsql";
 
-  // Establish a connection to the database
-  return await mysql.createPool({
-    user: process.env.DB_USER, // e.g. 'my-db-user'
-    password: process.env.DB_PASS, // e.g. 'my-db-password'
-    database: process.env.DB_NAME, // e.g. 'my-database'
-    // If connecting via unix domain socket, specify the path
-    socketPath: `${dbSocketPath}/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
-    // Specify additional properties here.
-    ...config
-  });
-}
-// [END cloud_sql_mysql_mysql_create_socket]
-
-const createPool = async () => {
-  const config = {
-    // [START cloud_sql_mysql_mysql_limit]
-    // 'connectionLimit' is the maximum number of connections the pool is allowed
-    // to keep at once.
-    connectionLimit: 5,
-    // [END cloud_sql_mysql_mysql_limit]
-
-    // [START cloud_sql_mysql_mysql_timeout]
-    // 'connectTimeout' is the maximum number of milliseconds before a timeout
-    // occurs during the initial connection to the database.
-    connectTimeout: 10000, // 10 seconds
-    // 'acquireTimeout' is the maximum number of milliseconds to wait when
-    // checking out a connection from the pool before a timeout error occurs.
-    acquireTimeout: 10000, // 10 seconds
-    // 'waitForConnections' determines the pool's action when no connections are
-    // free. If true, the request will queued and a connection will be presented
-    // when ready. If false, the pool will call back with an error.
-    waitForConnections: true, // Default: true
-    // 'queueLimit' is the maximum number of requests for connections the pool
-    // will queue at once before returning an error. If 0, there is no limit.
-    queueLimit: 0, // Default: 0
-    // [END cloud_sql_mysql_mysql_timeout]
-
-    // [START cloud_sql_mysql_mysql_backoff]
-    // The mysql module automatically uses exponential delays between failed
-    // connection attempts.
-    // [END cloud_sql_mysql_mysql_backoff]
-  }
-  if (process.env.DB_HOST) {
-    return await createTcpPool(config);
-  } else {
-    return await createUnixSocketPool(config);
-  }
-
+    // Establish a connection to the database
+    return await mysql.createPool({
+        user: process.env.DB_USER, // e.g. 'my-db-user'
+        password: process.env.DB_PASS, // e.g. 'my-db-password'
+        database: process.env.DB_NAME, // e.g. 'my-database'
+        // If connecting via unix domain socket, specify the path
+        socketPath: `${dbSocketPath}/${process.env.CLOUD_SQL_CONNECTION_NAME}`,
+        // Specify additional properties here.
+        ...config
+    });
 };
-// [END cloud_sql_mysql_mysql_create]
+
 
 let pool;
-const poolPromise = createPool()
+const poolPromise = mysql.createPool()
   .then((pool) => pool)
   .catch((err) => {
     console.log(err.stack);
@@ -104,8 +43,8 @@ const poolPromise = createPool()
   });
 
 app.use(async (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  if (pool) {
+    res.header('Access-Control-Allow-Origin', '*');
+    if (pool) {
     return next();
   }
   try {
@@ -117,6 +56,8 @@ app.use(async (req, res, next) => {
     return next(err);
   }
 });
+
+
 
 app.get('/', (req, res) => {
   res.send('Hello from App Engine!');
@@ -156,12 +97,6 @@ app.get('/getAllNums', async (req, res) => {
 
 app.post('/calculateEmissions', async (req, res) => {
     try {
-      // console.log('you posted to /signup'); //appears in console as expected
-      // console.log(req.body); // {} -- always empty? cant figre out why
-      // console.log(typeof req.body); //"object"
-      // console.log(req.method); // "POST
-        // console.log("req", req);
-        console.log("req body", req.body);
         const route = await findRoute(req.body.origin, req.body.dest);
         const stepDistances = [];
         const stepStart = [];
@@ -175,21 +110,20 @@ app.post('/calculateEmissions', async (req, res) => {
             stepEnd[i] = step.end_location;
         }
         determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
-        console.log("we made it!!");
-        console.log(steps);
         res.status(200).json(steps);
     } catch(err) {
-        console.log("Something went wrong!");
-        console.log(err.stack);
         res.status(500).send(SERVER_ERR_MSG);
     }
 });
 
 
-async function findRoute(origin, dest){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + dest + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+
+async function findRoute(){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
     return response.json();
 }
+
+
 
 async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     const refillDist = 36960; //testing  with 7 miles as point to refuel (measured right now in ft -- smallest unit on maps for distance)
@@ -230,9 +164,12 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     }
 
 
+
+
 // Listen to the App Engine-specified port, or 8080 otherwise
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
         // console.log(connection);
         console.log(`Server listening on port ${PORT}...`);
     });
+    
