@@ -174,28 +174,52 @@ app.get('/calculateEmissions', async (req, res) => {
 
 
 async function findRoute(){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=API_KEY_HERE");
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
     return response.json();
 }
 
-function determineFuelingCoordinates(stepDistances, stepStart, stepEnd){
+async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     const refillDist = 36960; //testing  with 7 miles as point to refuel (measured right now in ft -- smallest unit on maps for distance)
     let distanceWithoutFuel = 0;
-    for(let i = 0;i<stepDistances.length;i++){
-        if(distanceWithoutFuel + stepDistances[i] >= refillDist){
-            const heading = geo.computeHeading(stepStart[i],stepEnd[i]);
-            const fillPosition = geo.computeOffset(stepStart[i], stepDistances[i]-distanceWithoutFuel,heading);
+    let refillPlaces = [];
+    for (let i = 0; i < stepDistances.length; i++) {
+        if (stepDistances[i].substring(stepDistances[i].length - 2, stepDistances[i].length) === "km") {
+            let distance = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
+            stepDistances[i] = (1000 * distance);
+
+        } else {
+            stepDistances[i] = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
+        }
+        if (distanceWithoutFuel + stepDistances[i] >= refillDist) {
+            const heading = geo.computeHeading(stepStart[i], stepEnd[i]);
+            const fillPosition = geo.computeOffset(stepStart[i], refillDist - distanceWithoutFuel, heading);
+            const nearestStations = await findNearestGasStation(fillPosition);
+            refillPlaces[refillPlaces.length] = nearestStations[0].geometry.location;
+            distanceWithoutFuel = 0;
         }
         distanceWithoutFuel += stepDistances[i];
+        return refillPlaces;
     }
-
 }
 
 
+    async function findNearestGasStation(fillPosition) {
+        const response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=" + fillPosition + "&radius=1500&type=restaurant&rankby=distance&keyword=cruise&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+        return response.json();
+    }
+
+    function electricFindNearestCharging() {
+
+    }
+
+    function gasFindNearestCharging() {
+
+    }
+
 
 // Listen to the App Engine-specified port, or 8080 otherwise
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    // console.log(connection);
-  console.log(`Server listening on port ${PORT}...`);
-});
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+        // console.log(connection);
+        console.log(`Server listening on port ${PORT}...`);
+    });
