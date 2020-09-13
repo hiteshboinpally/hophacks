@@ -2,6 +2,7 @@
 
 'use strict';
 
+const multer = require('multer');
 const express = require('express');
 const mysql = require('promise-mysql');
 const bodyParser = require('body-parser');
@@ -9,12 +10,14 @@ const fetch = require('node-fetch');
 const geo = require('spherical-geometry-js');
 
 const app = express();
+app.use(multer().none());
+app.use(express.static('public'));
+
 app.set('view engine', 'pug');
 app.enable('trust proxy');
 
 // Automatically parse request body as form data.
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({extended: true}));
 
 const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!"
 
@@ -101,6 +104,7 @@ const poolPromise = createPool()
   });
 
 app.use(async (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
   if (pool) {
     return next();
   }
@@ -150,10 +154,15 @@ app.get('/getAllNums', async (req, res) => {
     }
 });
 
-app.get('/calculateEmissions', async (req, res) => {
+app.post('/calculateEmissions', async (req, res) => {
     try {
-        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-        const route = await findRoute();
+      // console.log('you posted to /signup'); //appears in console as expected
+      // console.log(req.body); // {} -- always empty? cant figre out why
+      // console.log(typeof req.body); //"object"
+      // console.log(req.method); // "POST
+        // console.log("req", req);
+        console.log("req body", req.body);
+        const route = await findRoute(req.body.origin, req.body.dest);
         const stepDistances = [];
         const stepStart = [];
         const stepEnd = [];
@@ -166,16 +175,19 @@ app.get('/calculateEmissions', async (req, res) => {
             stepEnd[i] = step.end_location;
         }
         determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
-        res.status(200).json(route);
+        console.log("we made it!!");
+        console.log(steps);
+        res.status(200).json(steps);
     } catch(err) {
+        console.log("Something went wrong!");
         console.log(err.stack);
         res.status(500).send(SERVER_ERR_MSG);
     }
 });
 
 
-async function findRoute(){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+async function findRoute(origin, dest){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + dest + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
     return response.json();
 }
 

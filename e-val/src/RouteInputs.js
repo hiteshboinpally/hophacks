@@ -45,32 +45,43 @@ class RouteInputs extends Component {
         if (noError) {
             console.log("here");
             this.setState({ showErrText : "hidden" });
-            let origin = this.state.oAdd + " " + this.state.oCity + " " + this.state.oState +
+            let originLoc = this.state.oAdd + " " + this.state.oCity + " " + this.state.oState +
                          " " + this.state.oZip;
-            console.log("origin", origin);
-            origin = encodeURIComponent(origin);
-            console.log("encoded origin", origin);
+            originLoc = encodeURIComponent(originLoc);
 
-            let dest = this.state.dAdd + " " + this.state.dCity + " " + this.state.dState +
+            let destLoc = this.state.dAdd + " " + this.state.dCity + " " + this.state.dState +
                        " " + this.state.dZip;
-            console.log("dest", dest);
-            dest = encodeURIComponent(dest);
-            console.log("encoded dest", dest);
+            destLoc = encodeURIComponent(destLoc);
 
-            let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + origin +
-                      "&destination=" + dest + "&key=sneaky"
+            let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + originLoc +
+                      "&destination=" + destLoc + "&key=sneaky"
 
             console.log('url', url);
-            let finalResult = "broken";
 
-            fetch(localUrl + "calculateEmissions")
+            let params = new FormData();
+            params.append("origin", originLoc);
+            params.append("dest", destLoc);
+
+            console.log("data exists:", params);
+
+            fetch(localUrl + "calculateEmissions",
+            {
+                method: 'POST',
+                body: params
+            })
+                .then(this.checkStatus)
                 .then(resp => resp.json())
-                .then((data) => {
-                    console.log(data);
-                })
-                .catch(err => console.log(err))
+                .then(data => {console.log("data", data)})
+                .catch(console.error);
+        }
+    }
 
-            console.log(finalResult);
+    checkStatus(response) {
+        console.log("response!", response)
+        if (response.ok) {
+            return response;
+        } else {
+            throw Error('Error in request: ' + response.statusText);
         }
     }
 
