@@ -19,7 +19,7 @@ class CarInformation extends Component {
                         options = {this.props.vehicles.map(t=>({value: t, label: t}))}
                         id = "vehicle1"
                         placeholder = "Select Vehicle #1"
-                        onChange = {this.props.onSelectOne}
+                        onChange = {this.props.onGetVehicleOne}
                     />
                 </p>
                 <p align = "center">
@@ -27,7 +27,7 @@ class CarInformation extends Component {
                         options = {this.props.vehicles.map(t=>({value: t, label: t}))}
                         id = "vehicle2"
                         placeholder = "Select Vehicle #2"
-                        onChange = {this.props.onSelectTwo}
+                        onChange = {this.props.onGetVehicleTwo}
                     />
                 </p>
             </div>

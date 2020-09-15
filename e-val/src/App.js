@@ -11,6 +11,8 @@ class App extends Component {
     super(props);
       this.state = {
           vehicles: [],
+          vehicleOne:"",
+          vehicleTwo:"",
       }
 
   }
@@ -35,6 +37,20 @@ class App extends Component {
         });
     }
 
+    handleSelectVehicleOne= (selectedItem) => {
+        this.setState({
+            vehicleOne: selectedItem.value
+        });
+    };
+
+    handleSelectVehicleTwo = (selectedItem) => {
+        this.setState({
+            vehicleTwo: selectedItem.value
+        });
+    };
+
+
+
 
     render(){
 
@@ -51,7 +67,9 @@ class App extends Component {
             <p>
               Please choose the make and model type of two cars you wish to compare.
             </p>
-          <CarInformation vehicles = {this.state.vehicles}/>
+          <CarInformation vehicles = {this.state.vehicles}
+                          onGetVehicleOne = {this.handleSelectVehicleOne}/>
+                          onGetVehicleTwo = {this.handleSelectVehicleTwo}/>/>
               <p>
               Now input your origin and destination addresses
               </p>
