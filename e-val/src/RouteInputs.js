@@ -52,14 +52,19 @@ class RouteInputs extends Component {
                        " " + this.state.dZip;
             destLoc = encodeURIComponent(destLoc);
 
+            let vehicleOne = this.props.vehicleOne;
+            let vehicleTwo = this.props.vehicleTwo;
+
             let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + originLoc +
-                      "&destination=" + destLoc + "&key=sneaky"
+                      "&destination=" + destLoc + "&key=sneaky";
 
             console.log('url', url);
 
             let params = new FormData();
             params.append("origin", originLoc);
             params.append("dest", destLoc);
+            params.append("carOne", vehicleOne);
+            params.append("carTwo", vehicleTwo);
 
             console.log("data exists:", params);
 
@@ -73,10 +78,10 @@ class RouteInputs extends Component {
                 .then(data => {console.log("data", data)})
                 .catch(console.error);
         }
-    }
+    };
 
     checkStatus(response) {
-        console.log("response!", response)
+        console.log("response!", response);
         if (response.ok) {
             return response;
         } else {

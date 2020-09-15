@@ -216,6 +216,8 @@ app.post('/calculateEmissions', async (req, res) => {
         const stepStart = [];
         const stepEnd = [];
         const steps = route.routes[0].legs[0].steps;
+        const vehicleOne = req.body.carOne;
+        const vehicleTwo = req.bod.carTwo;
 
         for(let i = 0; i<steps.length; i++){
             const step = steps[i];

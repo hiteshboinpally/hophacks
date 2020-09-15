@@ -73,7 +73,8 @@ class App extends Component {
               <p>
               Now input your origin and destination addresses
               </p>
-          <RouteInputs/>
+          <RouteInputs vehicleOne = {this.state.vehicleOne}
+                       vehicleTwo = {this.state.vehicleTwo}                                     />
           </header>
         </div>
     );
