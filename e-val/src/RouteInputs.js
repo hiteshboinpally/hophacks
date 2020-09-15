@@ -106,6 +106,8 @@ class RouteInputs extends Component {
                         <input type="text" id="oAdd" name="oAdd" value={this.state.firstName} onChange={this.onChange} />
                         <br />
 
+                        &nbsp;&nbsp;&nbsp;
+
                         <label htmlFor="oCity">City:</label>
                         <input
                             type="text"
@@ -115,6 +117,8 @@ class RouteInputs extends Component {
                             onChange={this.onChange}
                         />
                         <br />
+
+                        &nbsp;&nbsp;&nbsp;
 
                         <label htmlFor="oState">State (Abb.):</label>
                         <input
@@ -126,6 +130,7 @@ class RouteInputs extends Component {
                             onChange={this.onChange}
                         />
                         <br />
+                        &nbsp;&nbsp;&nbsp;
 
                         <label htmlFor="oZip">Zipcode:</label>
                         <input type="text" id="oZip" name="oZip" value={this.state.firstName} onChange={this.onChange} />
@@ -140,9 +145,11 @@ class RouteInputs extends Component {
                             <input type="text" id="dAdd" name="dAdd" value={this.state.firstName} onChange={this.onChange} />
                             <br />
 
+
                             <label htmlFor="dCity">City:</label>
                             <input type="text" id="dCity" name="dCity" value={this.state.firstName} onChange={this.onChange} />
                             <br />
+
 
                             <label htmlFor="dState">State (Abb.):</label>
                             <input
@@ -154,6 +161,8 @@ class RouteInputs extends Component {
                                 onChange={this.onChange}
                             />
                             <br />
+
+                            &nbsp;&nbsp;&nbsp;
 
                             <label htmlFor="dZip">Zipcode:</label>
                             <input type="text" id="dZip" name="dZip" value={this.state.firstName} onChange={this.onChange} />

@@ -43,6 +43,12 @@ h1{
   margin-right: 10px;
 }
 
+#oAdd, #oCity, #oState, #oZip, #dAdd, #dCity, #dState, #dZip{
+  margin-top: 10px;
+  margin-bottom: 10px;
+  flex-direction: column
+}
+
 #vehicle1, #vehicle2{
   width: 250px;
 }
