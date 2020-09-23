@@ -211,38 +211,41 @@ app.get('/getCarList', async (req, res) => {
 
 app.post('/calculateEmissions', async (req, res) => {
     try {
+        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+        console.log(req);
         const route = await findRoute(req.body.origin, req.body.dest);
-        const stepDistances = [];
-        const stepStart = [];
-        const stepEnd = [];
+        let stepDistances = [];
+        let stepStart = [];
+        let stepEnd = [];
         const steps = route.routes[0].legs[0].steps;
         const vehicleOne = req.body.carOne;
-        const vehicleTwo = req.bod.carTwo;
+        const vehicleTwo = req.body.carTwo;
 
         for(let i = 0; i<steps.length; i++){
             const step = steps[i];
-            stepDistances[i] = step.distance.text;
-            stepStart[i] = step.start_location;
-            stepEnd[i] = step.end_location;
+            stepDistances.push(step.distance.text);
+            stepStart.push(step.start_location);
+            stepEnd.push(step.end_location);
         }
-        determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
+        await determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
         res.status(200).json(steps);
     } catch(err) {
+        console.log(err);
         res.status(500).send(SERVER_ERR_MSG);
     }
 });
 
 
 
-async function findRoute(){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+async function findRoute(origin, destination){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + destination + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
     return response.json();
 }
 
 
 
 async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
-    const refillDist = 36960; //testing  with 7 miles as point to refuel (measured right now in ft -- smallest unit on maps for distance)
+    const refillDist = 2500; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
     let distanceWithoutFuel = 0;
     let refillPlaces = [];
     for (let i = 0; i < stepDistances.length; i++) {
@@ -256,19 +259,29 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         if (distanceWithoutFuel + stepDistances[i] >= refillDist) {
             const heading = geo.computeHeading(stepStart[i], stepEnd[i]);
             const fillPosition = geo.computeOffset(stepStart[i], refillDist - distanceWithoutFuel, heading);
-            const nearestStations = await findNearestElectricStation(fillPosition);
-            refillPlaces[refillPlaces.length] = nearestStations[0].geometry.location;
             distanceWithoutFuel = 0;
+            let nearestStation = await findNearestElectricStation(fillPosition);
+            refillPlaces.push(nearestStation)
         }
         distanceWithoutFuel += stepDistances[i];
-        return refillPlaces;
     }
+    console.log(refillPlaces);
+    return refillPlaces;
+
 }
 
 
     async function findNearestElectricStation(fillPosition) {
-        const response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522,151.1957362&radius=1500&keyword=electric-charging-station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-        return response.json();
+        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=electric charging station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+        response = await response.json();
+        let coord = response.results[0].geometry.location;
+        let lat = coord.lat;
+        let lng = coord.lng;
+        let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+        response_two = await response_two.json();
+        const address = response_two.results[0].formatted_address;
+        console.log(address);
+        return address.substring(address.length - 10, address.length - 5);
     }
     
 

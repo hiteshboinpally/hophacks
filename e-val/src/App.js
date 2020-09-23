@@ -68,8 +68,8 @@ class App extends Component {
               Please choose the make and model type of two cars you wish to compare.
             </p>
           <CarInformation vehicles = {this.state.vehicles}
-                          onGetVehicleOne = {this.handleSelectVehicleOne}/>
-                          onGetVehicleTwo = {this.handleSelectVehicleTwo}/>/>
+                          onGetVehicleOne = {this.handleSelectVehicleOne}
+                          onGetVehicleTwo = {this.handleSelectVehicleTwo}/>
               <p>
               Now input your origin and destination addresses
               </p>
