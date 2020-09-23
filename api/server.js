@@ -245,7 +245,7 @@ async function findRoute(origin, destination){
 
 
 async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
-    const refillDist = 2500; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
+    const refillDist = 30000; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
     let distanceWithoutFuel = 0;
     let refillPlaces = [];
     for (let i = 0; i < stepDistances.length; i++) {
@@ -257,11 +257,18 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
             stepDistances[i] = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
         }
         if (distanceWithoutFuel + stepDistances[i] >= refillDist) {
-            const heading = geo.computeHeading(stepStart[i], stepEnd[i]);
-            const fillPosition = geo.computeOffset(stepStart[i], refillDist - distanceWithoutFuel, heading);
+            const refillTimes = (distanceWithoutFuel + stepDistances[i])/refillDist;
+            let start = stepStart[i];
+            let end = stepEnd[i];
+            for(let j = 0;j < refillTimes; j++){
+                const heading = geo.computeHeading(start, end);
+                const fillPosition = geo.computeOffset(start, refillDist - distanceWithoutFuel, heading);
+                distanceWithoutFuel = 0;
+                start = fillPosition;
+                let nearestStation = await findNearestElectricStation(fillPosition);
+                refillPlaces.push(nearestStation)
+            }
             distanceWithoutFuel = 0;
-            let nearestStation = await findNearestElectricStation(fillPosition);
-            refillPlaces.push(nearestStation)
         }
         distanceWithoutFuel += stepDistances[i];
     }
