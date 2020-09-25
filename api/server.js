@@ -187,42 +187,51 @@ app.get('/getCarList', async (req, res) => {
 });
 
 app.post('/calculateEmissions', async (req, res) => {
-    try {
-        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-        //console.log(req);
-        const route = await findRoute(req.body.origin, req.body.dest);
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+    //console.log(req);
+    const vehicleOneMake = req.body.carOneMake;
+    const vehicleOneModel = req.body.carOneModel;
+    const vehicleOneYear = req.body.carOneYear;
+    const vehicleTwoMake = req.body.carTwoMake;
+    const vehicleTwoModel = req.body.carTwoModel;
+    const vehicleTwoYear = req.body.carTwoYear;
+    const emissionsOne = await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear);
+    const emissionsTwo = await processCarType(vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
+    console.log("Car One", emissionsOne);
+    console.log("Car Two", emissionsTwo);
+});
+
+async function processCarType(make, model, year) {
+    let carFuelType = await pool.query("SELECT fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    let emissionsNum = 0;
+    if(carFuelType === "Electricity"){
         let stepDistances = [];
         let stepStart = [];
         let stepEnd = [];
+        let route = "";
+        try {
+            route = await findRoute(req.body.origin, req.body.dest);
+            res.status(200).json(route);
+        }
+        catch{
+            console.log(err);
+            res.status(500).send(SERVER_ERR_MSG);
+        }
         const steps = route.routes[0].legs[0].steps;
-        const vehicleOneMake = req.body.carOneMake;
-        const vehicleOneModel = req.body.carOneModel;
-        const vehicleOneYear = req.body.carOneYear;
-        const vehicleTwoMake = req.body.carTwoMake;
-        const vehicleTwoModel = req.body.carTwoModel;
-        const vehicleTwoYear = req.body.carTwoYear;
-        const carOneType = await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear);
-        const carTwoType = await processCarType(vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
-
-        for(let i = 0; i<steps.length; i++){
+        for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             stepDistances.push(step.distance.text);
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
         await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
-        res.status(200).json(steps);
-    } catch(err) {
-        console.log(err);
-        res.status(500).send(SERVER_ERR_MSG);
     }
-});
-
-async function processCarType(make, model, year) {
-    let carFuelType = await pool.query("SELECT make, model, year, fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?",
-        [make, model, year]);
-    console.log(carFuelType);
-    return carFuelType;
+    else{
+        emissionsNum = await pool.query("SELECT co2TailPipeGpm FROM `vehicles` where make = ? AND model = ? AND year = ?",
+            [make, model, year]);
+    }
+    return emissionsNum;
 }
 
 
