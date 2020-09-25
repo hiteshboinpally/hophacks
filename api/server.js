@@ -1,5 +1,6 @@
 
 
+
 const createUnixSocketPool = async (config) => {
   const dbSocketPath = process.env.DB_SOCKET_PATH || "/cloudsql"
 
@@ -174,30 +175,6 @@ app.get('/getAllNums', async (req, res) => {
     }
 });
 
-/*
-app.get('/calculateEmissions', async (req, res) => {
-    try {
-        const route = await findRoute();
-        const stepDistances = [];
-        const stepStart = [];
-        const stepEnd = [];
-        const steps = route.routes[0].legs[0].steps;
-        for(let i = 0; i<steps.length; i++){
-            const step = steps[i];
-            stepDistances[i] = step.distance.text;
-            stepStart[i] = step.start_location;
-            stepEnd[i] = step.end_location;
-        }
-        await determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
-        res.status(200).json(route);
-
-    } catch(err) {
-        console.log(err.stack);
-        res.status(500).send(SERVER_ERR_MSG);
-    }
-});
-*/
-
 app.get('/getCarList', async (req, res) => {
     try {
         const allCars = await pool.query("SELECT make, model, year FROM `vehicles`");
@@ -246,7 +223,7 @@ async function findRoute(origin, destination){
 
 async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     const refillDist = 30000; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
-    let distanceWithoutFuel = 0;
+    let milesUntilRefill = refillDist;
     let refillPlaces = [];
     for (let i = 0; i < stepDistances.length; i++) {
         if (stepDistances[i].substring(stepDistances[i].length - 2, stepDistances[i].length) === "km") {
@@ -256,25 +233,36 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         } else {
             stepDistances[i] = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
         }
-        if (distanceWithoutFuel + stepDistances[i] >= refillDist) {
-            const refillTimes = (distanceWithoutFuel + stepDistances[i])/refillDist;
-            let start = stepStart[i];
-            let end = stepEnd[i];
+        if (milesUntilRefill < stepDistances[i]) {
+            const refillTimes = Math.floor(stepDistances[i]/milesUntilRefill);
+            let start = new geo.LatLng(stepStart[i].lat, stepStart[i].lng);
+            let end = new geo.LatLng(stepEnd[i].lat, stepEnd[i].lng);
+            console.log("STEP END", stepEnd[i]);
+            console.log("Entering Loop");
+            let heading = geo.computeHeading(start, end);
             for(let j = 0;j < refillTimes; j++){
-                const heading = geo.computeHeading(start, end);
-                const fillPosition = geo.computeOffset(start, refillDist - distanceWithoutFuel, heading);
-                distanceWithoutFuel = 0;
+                console.log("Loop iteration " + j + ": ");
+                console.log("until refill: " + milesUntilRefill);
+                console.log("heading:" + heading);
+                console.log("start longitude:", start.longitude);
+                console.log("start latitude:", start.latitude);
+                console.log("end longitude:", end.longitude);
+                console.log("end latitude:", end.latitude);
+                console.log("\n");
+                let fillPosition = geo.computeOffset(start, milesUntilRefill, heading);
+                milesUntilRefill = refillDist;
                 start = fillPosition;
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation)
             }
-            distanceWithoutFuel = 0;
+            milesUntilRefill -= (stepDistances[i]%milesUntilRefill);
         }
-        distanceWithoutFuel += stepDistances[i];
+        else {
+            milesUntilRefill -= stepDistances[i];
+        }
     }
     console.log(refillPlaces);
     return refillPlaces;
-
 }
 
 
@@ -287,7 +275,7 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
         response_two = await response_two.json();
         const address = response_two.results[0].formatted_address;
-        console.log(address);
+        console.log("Address: " + address);
         return address.substring(address.length - 10, address.length - 5);
     }
     
