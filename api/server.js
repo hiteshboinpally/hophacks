@@ -240,26 +240,30 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         // console.log("STEP START", stepStart[i]);
         // console.log("STEP END", stepEnd[i]);
         // console.log("STEP DISTANCES", distanceBetween);
-        if (milesUntilRefill < distanceBetween) {
-            const refillTimes = Math.floor(distanceBetween/milesUntilRefill);
+        // console.log("Entering loop");
+        if (milesUntilRefill <= distanceBetween) {
             let heading = geo.computeHeading(start, end);
-            for(let j = 0;j < refillTimes; j++){
+            let totalAccumulated = 0;
+            let j = 0;
+            while(totalAccumulated + milesUntilRefill <= distanceBetween){
                 // console.log("Loop iteration " + j + ": ");
                 // console.log("until refill: " + milesUntilRefill);
                 // console.log("heading:" + heading);
-                //  console.log(start.latitude +",", start.longitude);
-                //  console.log(end.latitude +",", end.longitude);
-                // console.log("\n");
+                //console.log(start.latitude +",", start.longitude);
+                //console.log(end.latitude +",", end.longitude);
+                j ++;
                 let fillPosition = geo.computeOffset(start, milesUntilRefill, heading);
+                totalAccumulated += milesUntilRefill;
                 milesUntilRefill = refillDist;
                 start = fillPosition;
+                // console.log(fillPosition.latitude +",", fillPosition.longitude);
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation)
             }
             milesUntilRefill -= (distanceBetween%milesUntilRefill);
         }
         else {
-            milesUntilRefill -= distanceBetween;
+            milesUntilRefill -= stepDistances[i];
         }
     }
     console.log(refillPlaces);
@@ -276,7 +280,7 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
         response_two = await response_two.json();
         const address = response_two.results[0].formatted_address;
-        console.log("Address: " + address);
+        console.log("Address: " + address + "\n");
         return address.substring(address.length - 10, address.length - 5);
     }
     
