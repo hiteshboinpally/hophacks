@@ -233,32 +233,33 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         } else {
             stepDistances[i] = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
         }
-        if (milesUntilRefill < stepDistances[i]) {
-            const refillTimes = Math.floor(stepDistances[i]/milesUntilRefill);
-            let start = new geo.LatLng(stepStart[i].lat, stepStart[i].lng);
-            let end = new geo.LatLng(stepEnd[i].lat, stepEnd[i].lng);
-            console.log("STEP END", stepEnd[i]);
-            console.log("Entering Loop");
+        let start = new geo.LatLng(stepStart[i].lat, stepStart[i].lng);
+        let end = new geo.LatLng(stepEnd[i].lat, stepEnd[i].lng);
+        let distanceBetween = geo.computeDistanceBetween(start, end);
+        // console.log("Miles until Refill", milesUntilRefill);
+        // console.log("STEP START", stepStart[i]);
+        // console.log("STEP END", stepEnd[i]);
+        // console.log("STEP DISTANCES", distanceBetween);
+        if (milesUntilRefill < distanceBetween) {
+            const refillTimes = Math.floor(distanceBetween/milesUntilRefill);
             let heading = geo.computeHeading(start, end);
             for(let j = 0;j < refillTimes; j++){
-                console.log("Loop iteration " + j + ": ");
-                console.log("until refill: " + milesUntilRefill);
-                console.log("heading:" + heading);
-                console.log("start longitude:", start.longitude);
-                console.log("start latitude:", start.latitude);
-                console.log("end longitude:", end.longitude);
-                console.log("end latitude:", end.latitude);
-                console.log("\n");
+                // console.log("Loop iteration " + j + ": ");
+                // console.log("until refill: " + milesUntilRefill);
+                // console.log("heading:" + heading);
+                //  console.log(start.latitude +",", start.longitude);
+                //  console.log(end.latitude +",", end.longitude);
+                // console.log("\n");
                 let fillPosition = geo.computeOffset(start, milesUntilRefill, heading);
                 milesUntilRefill = refillDist;
                 start = fillPosition;
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation)
             }
-            milesUntilRefill -= (stepDistances[i]%milesUntilRefill);
+            milesUntilRefill -= (distanceBetween%milesUntilRefill);
         }
         else {
-            milesUntilRefill -= stepDistances[i];
+            milesUntilRefill -= distanceBetween;
         }
     }
     console.log(refillPlaces);
@@ -267,7 +268,7 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
 
 
     async function findNearestElectricStation(fillPosition) {
-        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=electric charging station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
         response = await response.json();
         let coord = response.results[0].geometry.location;
         let lat = coord.lat;
