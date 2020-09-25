@@ -36,7 +36,7 @@ app.use(multer().none());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
-const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!"
+const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!";
 
 /*
 
@@ -189,14 +189,19 @@ app.get('/getCarList', async (req, res) => {
 app.post('/calculateEmissions', async (req, res) => {
     try {
         res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-        console.log(req);
+        //console.log(req);
         const route = await findRoute(req.body.origin, req.body.dest);
         let stepDistances = [];
         let stepStart = [];
         let stepEnd = [];
         const steps = route.routes[0].legs[0].steps;
-        const vehicleOne = req.body.carOne;
-        const vehicleTwo = req.body.carTwo;
+        const vehicleOneMake = req.body.carOneMake;
+        const vehicleOneModel = req.body.carOneModel;
+        const vehicleOneYear = req.body.carOneYear;
+        const vehicleTwoMake = req.body.carTwoMake;
+        const vehicleTwoModel = req.body.carTwoModel;
+        const vehicleTwoYear = req.body.carTwoYear;
+        await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear, vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
 
         for(let i = 0; i<steps.length; i++){
             const step = steps[i];
@@ -211,6 +216,11 @@ app.post('/calculateEmissions', async (req, res) => {
         res.status(500).send(SERVER_ERR_MSG);
     }
 });
+
+async function processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear, vehicleTwoMake, vehicleTwoModel, vehicleTwoYear) {
+    let carOne = await pool.query("SELECT make, model, year, fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?", [vehicleOneMake, vehicleOneModel, vehicleOneYear]);
+    console.log(carOne);
+}
 
 
 
@@ -280,7 +290,6 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
         response_two = await response_two.json();
         const address = response_two.results[0].formatted_address;
-        console.log("Address: " + address + "\n");
         return address.substring(address.length - 10, address.length - 5);
     }
     
