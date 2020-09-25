@@ -72,7 +72,7 @@ class RouteInputs extends Component {
             params.append("carOneYear", vehicleOneYear);
             params.append("carTwoMake", vehicleTwoMake);
             params.append("carTwoModel", vehicleTwoModel);
-            params.append("carTwoYear", vehicleTwoYear); 
+            params.append("carTwoYear", vehicleTwoYear);
 
             console.log("data exists:", params);
 

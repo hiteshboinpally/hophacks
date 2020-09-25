@@ -201,7 +201,8 @@ app.post('/calculateEmissions', async (req, res) => {
         const vehicleTwoMake = req.body.carTwoMake;
         const vehicleTwoModel = req.body.carTwoModel;
         const vehicleTwoYear = req.body.carTwoYear;
-        await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear, vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
+        const carOneType = await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear);
+        const carTwoType = await processCarType(vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
 
         for(let i = 0; i<steps.length; i++){
             const step = steps[i];
@@ -209,7 +210,7 @@ app.post('/calculateEmissions', async (req, res) => {
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
-        await determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
+        await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
         res.status(200).json(steps);
     } catch(err) {
         console.log(err);
@@ -217,21 +218,18 @@ app.post('/calculateEmissions', async (req, res) => {
     }
 });
 
-async function processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear, vehicleTwoMake, vehicleTwoModel, vehicleTwoYear) {
-    let carOne = await pool.query("SELECT make, model, year, fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?", [vehicleOneMake, vehicleOneModel, vehicleOneYear]);
-    console.log(carOne);
+async function processCarType(make, model, year) {
+    let carFuelType = await pool.query("SELECT make, model, year, fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    console.log(carFuelType);
+    return carFuelType;
 }
 
 
 
-async function findRoute(origin, destination){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + destination + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-    return response.json();
-}
 
 
-
-async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
+async function determineChargingCoordinates(stepDistances, stepStart, stepEnd) {
     const refillDist = 30000; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
     let milesUntilRefill = refillDist;
     let refillPlaces = [];
@@ -280,18 +278,23 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     return refillPlaces;
 }
 
+async function findRoute(origin, destination){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + destination + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    return response.json();
+}
 
-    async function findNearestElectricStation(fillPosition) {
-        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-        response = await response.json();
-        let coord = response.results[0].geometry.location;
-        let lat = coord.lat;
-        let lng = coord.lng;
-        let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-        response_two = await response_two.json();
-        const address = response_two.results[0].formatted_address;
-        return address.substring(address.length - 10, address.length - 5);
-    }
+
+async function findNearestElectricStation(fillPosition) {
+    let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    response = await response.json();
+    let coord = response.results[0].geometry.location;
+    let lat = coord.lat;
+    let lng = coord.lng;
+    let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    response_two = await response_two.json();
+    const address = response_two.results[0].formatted_address;
+    return address.substring(address.length - 10, address.length - 5);
+}
     
 
 
