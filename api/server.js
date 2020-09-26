@@ -111,7 +111,7 @@ const createPool = async () => {
   } else {*/
     return await createUnixSocketPool(config);
   //}
-    
+
 };
 // [END cloud_sql_mysql_mysql_create]
 
@@ -225,13 +225,31 @@ async function processCarType(make, model, year) {
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
-        await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
+        const refillPlaces = await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
+        const KWHPerBattery = determinekWHElectric(make, model, year);
+        determineEmissionsElectric(refillPlaces, KWHPerBattery);
     }
     else{
         emissionsNum = await pool.query("SELECT co2TailPipeGpm FROM `vehicles` where make = ? AND model = ? AND year = ?",
             [make, model, year]);
     }
     return emissionsNum;
+}
+
+async function determinekWHElectric(make, model, year){
+    let maxRange = await pool.query("SELECT maxElecRange FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    let per100 = await pool.query("SELECT elecConsumed_KwHrsBy100Mi FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    return maxRange * per100 / 100;
+}
+
+function determineEmissionsElectric(refillPlaces, KWHPerBattery){
+    refillPlaces.forEach(myEmissionsCalculation);
+    function myEmissionsCalculation(index, item){
+        //QUERY: GET THE EMISSIONS RATE IN LBS / MWh given the zipcode (item)
+        //Based on that, will mess with units and return that value as emissions value
+    }
 }
 
 
@@ -304,7 +322,7 @@ async function findNearestElectricStation(fillPosition) {
     const address = response_two.results[0].formatted_address;
     return address.substring(address.length - 10, address.length - 5);
 }
-    
+
 
 
 // Listen to the App Engine-specified port, or 8080 otherwise
@@ -313,4 +331,3 @@ async function findNearestElectricStation(fillPosition) {
         // console.log(connection);
         console.log(`Server listening on port ${PORT}...`);
     });
-    
