@@ -54,8 +54,12 @@ class RouteInputs extends Component {
                        " " + this.state.dZip;
             destLoc = encodeURIComponent(destLoc);
 
-            let vehicleOne = this.props.vehicleOne;
-            let vehicleTwo = this.props.vehicleTwo;
+            let vehicleOneMake = this.props.makes[this.props.vehicles.indexOf(this.props.vehicleOne)];
+            let vehicleOneModel = this.props.models[this.props.vehicles.indexOf(this.props.vehicleOne)];
+            let vehicleOneYear = this.props.years[this.props.vehicles.indexOf(this.props.vehicleOne)];
+            let vehicleTwoMake = this.props.makes[this.props.vehicles.indexOf(this.props.vehicleTwo)];
+            let vehicleTwoModel = this.props.models[this.props.vehicles.indexOf(this.props.vehicleTwo)];
+            let vehicleTwoYear = this.props.years[this.props.vehicles.indexOf(this.props.vehicleTwo)];
 
             let url = "https://maps.googleapis.com/maps/api/directions/json?origin=" + originLoc +
                       "&destination=" + destLoc + "&key=sneaky";
@@ -65,12 +69,16 @@ class RouteInputs extends Component {
             let params = new FormData();
             params.append("origin", originLoc);
             params.append("dest", destLoc);
-            params.append("carOne", vehicleOne);
-            params.append("carTwo", vehicleTwo);
+            params.append("carOneMake", vehicleOneMake);
+            params.append("carOneModel", vehicleOneModel);
+            params.append("carOneYear", vehicleOneYear);
+            params.append("carTwoMake", vehicleTwoMake);
+            params.append("carTwoModel", vehicleTwoModel);
+            params.append("carTwoYear", vehicleTwoYear);
 
             console.log("data exists:", params);
 
-            fetch(localUrl + "calculateEmissions",
+            fetch(publicUrl + "calculateEmissions",
             {
                 method: 'POST',
                 body: params

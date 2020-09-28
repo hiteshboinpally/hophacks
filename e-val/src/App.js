@@ -11,6 +11,9 @@ class App extends Component {
     super(props);
       this.state = {
           vehicles: [],
+          makes:[],
+          models:[],
+          years:[],
           vehicleOne:"",
           vehicleTwo:"",
       }
@@ -23,17 +26,26 @@ class App extends Component {
 
     async makeRequestVehicles(){
         const vehiclesTemp = [];
+        const makesTemp = [];
+        const modelsTemp = [];
+        const yearsTemp = [];
         const response = await fetch(publicUrl+"getCarList");
         const text = await response.json();
-        for(let i = 0;i<10;i++){
+        for(let i = 500;i<2000;i++){
             const currentVeh = text[i];
-            console.log(currentVeh);
             let vehicleToAdd = "";
             vehicleToAdd += currentVeh.make + " " + currentVeh.model + " " + currentVeh.year;
             vehiclesTemp[vehiclesTemp.length] = vehicleToAdd;
+            makesTemp[makesTemp.length] = currentVeh.make;
+            modelsTemp[modelsTemp.length] = currentVeh.model;
+            yearsTemp[yearsTemp.length] = currentVeh.year;
+
         }
         this.setState({
             vehicles:vehiclesTemp,
+            makes:makesTemp,
+            models:modelsTemp,
+            years:yearsTemp
         });
     }
 
@@ -74,7 +86,8 @@ class App extends Component {
               Now input your origin and destination addresses
               </p>
           <RouteInputs vehicleOne = {this.state.vehicleOne}
-                       vehicleTwo = {this.state.vehicleTwo}                                     />
+                       vehicleTwo = {this.state.vehicleTwo} vehicles = {this.state.vehicles} models = {this.state.models}
+          makes = {this.state.makes} years = {this.state.years}/>
           </header>
         </div>
     );

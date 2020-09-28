@@ -36,7 +36,7 @@ app.use(multer().none());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
-const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!"
+const SERVER_ERR_MSG = "Something went wrong with the Server. Please try again soon!";
 
 /*
 
@@ -188,38 +188,82 @@ app.get('/getCarList', async (req, res) => {
 });
 
 app.post('/calculateEmissions', async (req, res) => {
-    try {
-        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-        // console.log(req);
-        const route = await findRoute(req.body.origin, req.body.dest);
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+    //console.log(req);
+    const vehicleOneMake = req.body.carOneMake;
+    const vehicleOneModel = req.body.carOneModel;
+    const vehicleOneYear = req.body.carOneYear;
+    const vehicleTwoMake = req.body.carTwoMake;
+    const vehicleTwoModel = req.body.carTwoModel;
+    const vehicleTwoYear = req.body.carTwoYear;
+    const emissionsOne = await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear);
+    const emissionsTwo = await processCarType(vehicleTwoMake, vehicleTwoModel, vehicleTwoYear);
+    console.log("Car One", emissionsOne);
+    console.log("Car Two", emissionsTwo);
+});
+
+async function processCarType(make, model, year) {
+    let carFuelType = await pool.query("SELECT fuelType FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    let emissionsNum = 0;
+    if(carFuelType === "Electricity"){
         let stepDistances = [];
         let stepStart = [];
         let stepEnd = [];
+        let route = "";
+        try {
+            route = await findRoute(req.body.origin, req.body.dest);
+            res.status(200).json(route);
+        }
+        catch{
+            console.log(err);
+            res.status(500).send(SERVER_ERR_MSG);
+        }
         const steps = route.routes[0].legs[0].steps;
-        const vehicleOne = req.body.carOne;
-        const vehicleTwo = req.body.carTwo;
-
-        for(let i = 0; i<steps.length; i++){
+        for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             stepDistances.push(step.distance.text);
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
-        // res.status(200).json({"ay": "what's wrong"});
-        // let result = ;
-        // console.log("result", result);
-        res.status(200).json(await determineFuelingCoordinates(stepDistances, stepStart, stepEnd));
-    } catch(err) {
-        console.log(err);
-        res.status(500).send(SERVER_ERR_MSG);
+        const refillPlaces = await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
+        const KWHPerBattery = determinekWHElectric(make, model, year);
+        determineEmissionsElectric(refillPlaces, KWHPerBattery);
     }
-});
+    else{
+        emissionsNum = await pool.query("SELECT co2TailPipeGpm FROM `vehicles` where make = ? AND model = ? AND year = ?",
+            [make, model, year]);
+    }
+    return emissionsNum;
+}
 
+async function determinekWHElectric(make, model, year){
+    let maxRange = await pool.query("SELECT maxElecRange FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    let per100 = await pool.query("SELECT elecConsumed_KwHrsBy100Mi FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    return maxRange * per100 / 100;
+}
 
+function determineEmissionsElectric(refillPlaces, KWHPerBattery){
+    refillPlaces.forEach(myEmissionsCalculation);
+    function myEmissionsCalculation(index, item) {
+        const statement = "SELECT z.zipcode AS zipcode, c.co2LbPerMWh AS emission_rate" +
+                      "FROM zipcodes AS z, co2ByRegion AS c" +
+                      "WHERE z.subregion = c.subregion AND z.zipcode = ?";
+        let result = await pool.query(statement, item)
+        //QUERY: GET THE EMISSIONS RATE IN LBS / MWh given the zipcode (item)
+        //Based on that, will mess with units and return that value as emissions value
 
-async function findRoute(origin, destination){
-    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + destination + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-    return response.json();
+        // Example Output (emiission_rate is in LBS/MWh):
+        /**
+          +---------+---------------+
+          | zipcode | emission_rate |
+          +---------+---------------+
+          | 98038   |           639 |
+          +---------+---------------+
+         */
+    }
 }
 
 
@@ -250,16 +294,20 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         if (milesUntilRefill < distanceBetween) {
             const refillTimes = Math.floor(distanceBetween/milesUntilRefill);
             let heading = geo.computeHeading(start, end);
-            for(let j = 0;j < refillTimes; j++){
+            let totalAccumulated = 0;
+            let j = 0;
+            while(totalAccumulated + milesUntilRefill <= distanceBetween){
                 // console.log("Loop iteration " + j + ": ");
                 // console.log("until refill: " + milesUntilRefill);
                 // console.log("heading:" + heading);
-                //  console.log(start.latitude +",", start.longitude);
-                //  console.log(end.latitude +",", end.longitude);
-                // console.log("\n");
+                //console.log(start.latitude +",", start.longitude);
+                //console.log(end.latitude +",", end.longitude);
+                j ++;
                 let fillPosition = geo.computeOffset(start, milesUntilRefill, heading);
+                totalAccumulated += milesUntilRefill;
                 milesUntilRefill = refillDist;
                 start = fillPosition;
+                // console.log(fillPosition.latitude +",", fillPosition.longitude);
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation)
                 allStops.push({"lat": fillPosition.latitude, "lng": fillPosition.longitude});
@@ -267,7 +315,7 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
             milesUntilRefill -= (distanceBetween%milesUntilRefill);
         }
         else {
-            milesUntilRefill -= distanceBetween;
+            milesUntilRefill -= stepDistances[i];
         }
         allStops.push({"lat": end.latitude, "lng": end.longitude});
     }
@@ -277,31 +325,47 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
     return {"refill_places": refillPlaces, "all_stops": allStops};
 }
 
+async function findRoute(origin, destination){
+    const response = await fetch("https://maps.googleapis.com/maps/api/directions/json?origin=" + origin + "&destination=" + destination + "&units=metric&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    return response.json();
+}
 
-    async function findNearestElectricStation(fillPosition) {
-        const keyword = "electric charging station";
-        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=" + keyword + "&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-        response = await response.json();
-        let coord = 0;
-        if (response.status !== "ZERO_RESULTS") {
-          coord = response.results[0].geometry.location;
-          let lat = coord.lat;
-          let lng = coord.lng;
-          let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-          response_two = await response_two.json();
-          const address = response_two.results[0].formatted_address;
-          // console.log("Address: " + address);
-          return address.substring(address.length - 10, address.length - 5);
-        } else {
-          return "No nearby adress no idea what to do lol fml";
-        }
+
+async function findNearestElectricStation(fillPosition) {
+    let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    response = await response.json();
+    let coord = response.results[0].geometry.location;
+    let lat = coord.lat;
+    let lng = coord.lng;
+    let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    response_two = await response_two.json();
+    const address = response_two.results[0].formatted_address;
+    return address.substring(address.length - 10, address.length - 5);
+}
+
+async function findNearestElectricStation(fillPosition) {
+    const keyword = "electric charging station";
+    let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=" + keyword + "&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+    response = await response.json();
+    let coord = 0;
+    if (response.status !== "ZERO_RESULTS") {
+      coord = response.results[0].geometry.location;
+      let lat = coord.lat;
+      let lng = coord.lng;
+      let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+      response_two = await response_two.json();
+      const address = response_two.results[0].formatted_address;
+      // console.log("Address: " + address);
+      return address.substring(address.length - 10, address.length - 5);
+    } else {
+      return "No nearby adress no idea what to do lol fml";
     }
-
+}
 
 
 // Listen to the App Engine-specified port, or 8080 otherwise
-    const PORT = process.env.PORT || 8080;
-    app.listen(PORT, () => {
-        // console.log(connection);
-        console.log(`Server listening on port ${PORT}...`);
-    });
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    // console.log(connection);
+    console.log(`Server listening on port ${PORT}...`);
+});
