@@ -1,5 +1,7 @@
-import React, {ReactDOM, Component} from 'react';
+import React, {ReactDOM, Component, useState} from 'react';
 import './App.css';
+// import GoogleMapReact from 'google-map-react';
+import { Map, GoogleApiWrapper, Marker } from 'google-maps-react';
 
 const publicUrl = "https://amplified-ward-289301.wl.r.appspot.com/";
 const localUrl = "http://localhost:8080/";
@@ -17,9 +19,9 @@ class RouteInputs extends Component {
             dState: '',
             oZip: '',
             dZip: '',
-            showErrText: "hidden"
+            showErrText: "hidden",
+            showMap: "hidden"
         };
-
     }
 
     onChange = (e) => {
@@ -75,10 +77,19 @@ class RouteInputs extends Component {
             })
                 .then(this.checkStatus)
                 .then(resp => resp.json())
-                .then(data => {console.log("data", data)})
+                .then(data => this.handleData)
                 .catch(console.error);
         }
     };
+
+    handleData(data) {
+        this.plotPoints(data.all_stops);
+    }
+
+    plotPoints(allStops) {
+        this.setState({ showMap : "show"});
+        // var usCenter = new google.maps.LatLng(39.8283, 98.5795);
+    }
 
     checkStatus(response) {
         console.log("response!", response);
@@ -98,9 +109,9 @@ class RouteInputs extends Component {
     render() {
         //refers to the dropdown for possible short building names so more information can be gathered
         const { showErrText } = this.state;
+        const { showMap } = this.state;
         return (
             <div>
-
                 <div
                     className = "route-input"
                 >
@@ -118,7 +129,7 @@ class RouteInputs extends Component {
                             type="text"
                             id="oCity"
                             name="oCity"
-                            value={this.state.firstName}
+                            value={this.state.oCity}
                             onChange={this.onChange}
                         />
                         <br />
@@ -131,14 +142,14 @@ class RouteInputs extends Component {
                             id="oState"
                             name="oState"
                             pattern="[A-Z]{2}"
-                            value={this.state.firstName}
+                            value={this.state.oState}
                             onChange={this.onChange}
                         />
                         <br />
                         &nbsp;&nbsp;&nbsp;
 
                         <label htmlFor="oZip">Zipcode:</label>
-                        <input type="text" id="oZip" name="oZip" value={this.state.firstName} onChange={this.onChange} />
+                        <input type="text" id="oZip" name="oZip" value={this.state.oZip} onChange={this.onChange} />
                         <br />
 
                     </div>
@@ -147,12 +158,12 @@ class RouteInputs extends Component {
                         className = "route-destination"
                     >
                             <label htmlFor="dAdd">Address:</label>
-                            <input type="text" id="dAdd" name="dAdd" value={this.state.firstName} onChange={this.onChange} />
+                            <input type="text" id="dAdd" name="dAdd" value={this.state.dAdd} onChange={this.onChange} />
                             <br />
 
 
                             <label htmlFor="dCity">City:</label>
-                            <input type="text" id="dCity" name="dCity" value={this.state.firstName} onChange={this.onChange} />
+                            <input type="text" id="dCity" name="dCity" value={this.state.dCity} onChange={this.onChange} />
                             <br />
 
 
@@ -162,7 +173,7 @@ class RouteInputs extends Component {
                                 id="dState"
                                 name="dState"
                                 pattern="[A-Z]{2}"
-                                value={this.state.firstName}
+                                value={this.state.dState}
                                 onChange={this.onChange}
                             />
                             <br />
@@ -170,15 +181,56 @@ class RouteInputs extends Component {
                             &nbsp;&nbsp;&nbsp;
 
                             <label htmlFor="dZip">Zipcode:</label>
-                            <input type="text" id="dZip" name="dZip" value={this.state.firstName} onChange={this.onChange} />
+                            <input type="text" id="dZip" name="dZip" value={this.state.dZip} onChange={this.onChange} />
                             <br />
                     </div>
                 </div>
                 <button id="submit" onClick={this.handleSubmit}>Calculate Emissions on Route</button>
                 <p id="error-txt" className={showErrText}>Looks like something has not been filled in properly!</p>
+                <MapComponent className={showMap}></MapComponent>
             </div>
         );
     }
 }
 
-export default RouteInputs;
+export class MapComponent extends Component {
+    // Need to pass down params from fetch endpoint into this function and then fill in the content from there
+    render() {
+        const containerStyle = {
+            width: '500px',
+            height: '500px'
+        }
+
+        return (
+            <div className="map-area">
+                <Map
+                    google={this.props.google}
+                    style = {containerStyle}
+                    zoom={14}
+                    initialCenter={{
+                        lat: 47.444,
+                        lng: -122.176
+                    }}
+                >
+                    <Marker key="marker_1"
+                        position={{
+                            lat: 47.444,
+                            lng: -122.176
+                        }}
+                    />
+                    <Marker key="marker_2"
+                        position={{
+                            lat: 47.444,
+                            lng: -122.178
+                        }}
+                    />
+                </Map>
+            </div>
+        );
+    }
+}
+export default GoogleApiWrapper({
+apiKey: ('AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k')
+})(MapComponent);
+
+// export default RouteInputs;

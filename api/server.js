@@ -111,7 +111,7 @@ const createPool = async () => {
   } else {*/
     return await createUnixSocketPool(config);
   //}
-    
+
 };
 // [END cloud_sql_mysql_mysql_create]
 
@@ -177,6 +177,7 @@ app.get('/getAllNums', async (req, res) => {
 
 app.get('/getCarList', async (req, res) => {
     try {
+        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
         const allCars = await pool.query("SELECT make, model, year FROM `vehicles`");
         console.log(allCars);
         res.status(200).json(allCars);
@@ -189,7 +190,7 @@ app.get('/getCarList', async (req, res) => {
 app.post('/calculateEmissions', async (req, res) => {
     try {
         res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-        console.log(req);
+        // console.log(req);
         const route = await findRoute(req.body.origin, req.body.dest);
         let stepDistances = [];
         let stepStart = [];
@@ -204,8 +205,10 @@ app.post('/calculateEmissions', async (req, res) => {
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
-        await determineFuelingCoordinates(stepDistances, stepStart, stepEnd);
-        res.status(200).json(steps);
+        // res.status(200).json({"ay": "what's wrong"});
+        // let result = ;
+        // console.log("result", result);
+        res.status(200).json(await determineFuelingCoordinates(stepDistances, stepStart, stepEnd));
     } catch(err) {
         console.log(err);
         res.status(500).send(SERVER_ERR_MSG);
@@ -222,17 +225,20 @@ async function findRoute(origin, destination){
 
 
 async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
+    console.log("starting determinations");
     const refillDist = 30000; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
     let milesUntilRefill = refillDist;
     let refillPlaces = [];
+    let allStops = [];
     for (let i = 0; i < stepDistances.length; i++) {
+        // Standardize Units
         if (stepDistances[i].substring(stepDistances[i].length - 2, stepDistances[i].length) === "km") {
             let distance = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
             stepDistances[i] = (1000 * distance);
-
         } else {
             stepDistances[i] = parseFloat(stepDistances[i].substring(0, stepDistances[i].length - 2));
         }
+
         let start = new geo.LatLng(stepStart[i].lat, stepStart[i].lng);
         let end = new geo.LatLng(stepEnd[i].lat, stepEnd[i].lng);
         let distanceBetween = geo.computeDistanceBetween(start, end);
@@ -240,6 +246,7 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         // console.log("STEP START", stepStart[i]);
         // console.log("STEP END", stepEnd[i]);
         // console.log("STEP DISTANCES", distanceBetween);
+        allStops.push({"lat": start.latitude, "lng": start.longitude});
         if (milesUntilRefill < distanceBetween) {
             const refillTimes = Math.floor(distanceBetween/milesUntilRefill);
             let heading = geo.computeHeading(start, end);
@@ -255,31 +262,41 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
                 start = fillPosition;
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation)
+                allStops.push({"lat": fillPosition.latitude, "lng": fillPosition.longitude});
             }
             milesUntilRefill -= (distanceBetween%milesUntilRefill);
         }
         else {
             milesUntilRefill -= distanceBetween;
         }
+        allStops.push({"lat": end.latitude, "lng": end.longitude});
     }
-    console.log(refillPlaces);
-    return refillPlaces;
+    // console.log(refillPlaces);
+    // console.log(allStops);
+    console.log("finished determinations");
+    return {"refill_places": refillPlaces, "all_stops": allStops};
 }
 
 
     async function findNearestElectricStation(fillPosition) {
-        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+        const keyword = "electric charging station";
+        let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=" + keyword + "&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
         response = await response.json();
-        let coord = response.results[0].geometry.location;
-        let lat = coord.lat;
-        let lng = coord.lng;
-        let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-        response_two = await response_two.json();
-        const address = response_two.results[0].formatted_address;
-        console.log("Address: " + address);
-        return address.substring(address.length - 10, address.length - 5);
+        let coord = 0;
+        if (response.status !== "ZERO_RESULTS") {
+          coord = response.results[0].geometry.location;
+          let lat = coord.lat;
+          let lng = coord.lng;
+          let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
+          response_two = await response_two.json();
+          const address = response_two.results[0].formatted_address;
+          // console.log("Address: " + address);
+          return address.substring(address.length - 10, address.length - 5);
+        } else {
+          return "No nearby adress no idea what to do lol fml";
+        }
     }
-    
+
 
 
 // Listen to the App Engine-specified port, or 8080 otherwise
@@ -288,4 +305,3 @@ async function determineFuelingCoordinates(stepDistances, stepStart, stepEnd) {
         // console.log(connection);
         console.log(`Server listening on port ${PORT}...`);
     });
-    

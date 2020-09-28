@@ -62,6 +62,10 @@ h1{
   display: none;
 }
 
+.map-area {
+  height: 10px;
+}
+
 #error-txt {
   color: red;
 }
