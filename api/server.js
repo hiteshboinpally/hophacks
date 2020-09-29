@@ -251,41 +251,45 @@ async function determinekWHElectric(make, model, year){
 
 async function determineEmissionsElectric(refillPlaces, KWHPerBattery, totalDistance){
     console.log("REFILL PLACES", refillPlaces);
-    refillPlaces.forEach(await myEmissionsCalculation);
-    let totalPounds = 0;
-    async function myEmissionsCalculation(item) {
-        console.log("ZIPCODE", item);
-        const statement = "SELECT z.zipcode AS zipcode, c.co2LbPerMWh AS emission_rate" +
-            " FROM zipcodes AS z, co2ByRegion AS c" +
-            " WHERE z.subregion = c.subregion AND z.zipcode = ?";
-        let emissionQuery = await pool.query(statement, item);
-        console.log("QUERY", await emissionQuery);
-        let emissionRate = await emissionQuery[0].emission_rate;
-        //QUERY: GET THE EMISSIONS RATE IN LBS / MWh given the zipcode (item)
-        //Based on that, will mess with units and return that value as emissions value
-
-        // Example Output (emission_rate is in LBS/MWh):
-        /**
-         +---------+---------------+
-         | zipcode | emission_rate |
-         +---------+---------------+
-         | 98038   |           639 |
-         +---------+---------------+
-         */
-        //1000 kWh = 1 mWh
-        console.log("individual emission rate", emissionRate);
-        emissionRate = emissionRate/1000.0;
-        console.log("individual emission rate converted", emissionRate);
-        let poundsPerStop = emissionRate * KWHPerBattery;
-        console.log("individual pounds", poundsPerStop);
-        totalPounds += poundsPerStop;
-        console.log("KwH per battery", KWHPerBattery);
-    }
     let emissionsTotalRate = 0;
+    totalPounds = await calcTotalPoundsEmitted(refillPlaces, KWHPerBattery);
     if(totalDistance > 0){
         emissionsTotalRate = totalPounds/totalDistance * 453.592;
     }
     console.log("emissions rate electric", emissionsTotalRate);
+}
+
+async function calcTotalPoundsEmitted(refillPlaces, KWHPerBattery) {
+  let totalPounds = 0;
+  for (const zipcode of refillPlaces) {
+      console.log("ZIPCODE", zipcode);
+      const statement = "SELECT z.zipcode AS zipcode, c.co2LbPerMWh AS emission_rate" +
+          " FROM zipcodes AS z, co2ByRegion AS c" +
+          " WHERE z.subregion = c.subregion AND z.zipcode = ?";
+      let emissionQuery = await pool.query(statement, zipcode);
+      console.log("QUERY", await emissionQuery);
+      let emissionRate = await emissionQuery[0].emission_rate;
+      //QUERY: GET THE EMISSIONS RATE IN LBS / MWh given the zipcode (item)
+      //Based on that, will mess with units and return that value as emissions value
+
+      // Example Output (emission_rate is in LBS/MWh):
+      /**
+       +---------+---------------+
+       | zipcode | emission_rate |
+       +---------+---------------+
+       | 98038   |           639 |
+       +---------+---------------+
+       */
+      //1000 kWh = 1 mWh
+      console.log("individual emission rate", emissionRate);
+      emissionRate = emissionRate / 1000.0;
+      console.log("individual emission rate converted", emissionRate);
+      let poundsPerStop = emissionRate * KWHPerBattery;
+      console.log("individual pounds", poundsPerStop);
+      totalPounds += poundsPerStop;
+      console.log("KwH per battery", KWHPerBattery);
+  }
+  return totalPounds;
 }
 
 
