@@ -31,7 +31,8 @@ class App extends Component {
         const yearsTemp = [];
         const response = await fetch(publicUrl+"getCarList");
         const text = await response.json();
-        for(let i = 500;i<2000;i++){
+        console.log(text);
+        for(let i = 0;i<2000;i++){
             const currentVeh = text[i];
             let vehicleToAdd = "";
             vehicleToAdd += currentVeh.make + " " + currentVeh.model + " " + currentVeh.year;

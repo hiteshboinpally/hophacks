@@ -195,11 +195,12 @@ class RouteInputs extends Component {
                 </div>
                 <button id="submit" onClick={this.handleSubmit}>Calculate Emissions on Route</button>
                 <p id="error-txt" className={showErrText}>Looks like something has not been filled in properly!</p>
-                <MapComponent className={showMap}></MapComponent>
+                {/*<MapComponent className={showMap}></MapComponent>*/}
             </div>
         );
     }
 }
+
 
 export class MapComponent extends Component {
     // Need to pass down params from fetch endpoint into this function and then fill in the content from there
@@ -207,7 +208,7 @@ export class MapComponent extends Component {
         const containerStyle = {
             width: '500px',
             height: '500px'
-        }
+        };
 
         return (
             <div className="map-area">
@@ -237,8 +238,8 @@ export class MapComponent extends Component {
         );
     }
 }
-export default GoogleApiWrapper({
-apiKey: ('AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k')
-})(MapComponent);
+// export default GoogleApiWrapper({
+// apiKey: ('AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k')
+// })(MapComponent);
 
-// export default RouteInputs;
+ export default RouteInputs;
