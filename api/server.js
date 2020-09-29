@@ -200,6 +200,8 @@ app.post('/calculateEmissions', async (req, res) => {
         const dest = req.body.dest;
         const emissionsOne = await processCarType(vehicleOneMake, vehicleOneModel, vehicleOneYear, origin, dest);
         const emissionsTwo = await processCarType(vehicleTwoMake, vehicleTwoModel, vehicleTwoYear, origin, dest);
+        console.log("CAR ONE", emissionsOne);
+        console.log("CAR TWO", emissionsTwo);
         res.status(200).send(emissionsOne - emissionsTwo > 0);
     }
     catch(err){
@@ -225,11 +227,12 @@ async function processCarType(make, model, year, origin, dest) {
             stepStart.push(step.start_location);
             stepEnd.push(step.end_location);
         }
-        const chargingObj = await determineChargingCoordinates(stepDistances, stepStart, stepEnd);
+        const chargingObj = await determineChargingCoordinates(stepDistances, stepStart, stepEnd, make, model, year);
         const refillPlaces = chargingObj.refill_places;
         const totalDistance = chargingObj.total_distance;
         const KWHPerBattery = await determinekWHElectric(make, model, year);
-        await determineEmissionsElectric(refillPlaces, KWHPerBattery, totalDistance);
+        const emissionsNumElectric = await determineEmissionsElectric(refillPlaces, KWHPerBattery, totalDistance);
+        emissionsNum = emissionsNumElectric;
     }
     else{
         let c02Query = await pool.query("SELECT co2TailPipeGpm FROM `vehicles` where make = ? AND model = ? AND year = ?",
@@ -250,24 +253,22 @@ async function determinekWHElectric(make, model, year){
 }
 
 async function determineEmissionsElectric(refillPlaces, KWHPerBattery, totalDistance){
-    console.log("REFILL PLACES", refillPlaces);
     let emissionsTotalRate = 0;
-    totalPounds = await calcTotalPoundsEmitted(refillPlaces, KWHPerBattery);
+    let totalPounds = await calcTotalPoundsEmitted(refillPlaces, KWHPerBattery);
     if(totalDistance > 0){
-        emissionsTotalRate = totalPounds/totalDistance * 453.592;
+        emissionsTotalRate = totalPounds/totalDistance * 453.592 * 1609.34;
     }
     console.log("emissions rate electric", emissionsTotalRate);
+    return emissionsTotalRate;
 }
 
 async function calcTotalPoundsEmitted(refillPlaces, KWHPerBattery) {
   let totalPounds = 0;
   for (const zipcode of refillPlaces) {
-      console.log("ZIPCODE", zipcode);
       const statement = "SELECT z.zipcode AS zipcode, c.co2LbPerMWh AS emission_rate" +
           " FROM zipcodes AS z, co2ByRegion AS c" +
           " WHERE z.subregion = c.subregion AND z.zipcode = ?";
       let emissionQuery = await pool.query(statement, zipcode);
-      console.log("QUERY", await emissionQuery);
       let emissionRate = await emissionQuery[0].emission_rate;
       //QUERY: GET THE EMISSIONS RATE IN LBS / MWh given the zipcode (item)
       //Based on that, will mess with units and return that value as emissions value
@@ -281,21 +282,21 @@ async function calcTotalPoundsEmitted(refillPlaces, KWHPerBattery) {
        +---------+---------------+
        */
       //1000 kWh = 1 mWh
-      console.log("individual emission rate", emissionRate);
       emissionRate = emissionRate / 1000.0;
-      console.log("individual emission rate converted", emissionRate);
       let poundsPerStop = emissionRate * KWHPerBattery;
-      console.log("individual pounds", poundsPerStop);
       totalPounds += poundsPerStop;
-      console.log("KwH per battery", KWHPerBattery);
   }
   return totalPounds;
 }
 
 
 
-async function determineChargingCoordinates(stepDistances, stepStart, stepEnd) {
-    const refillDist = 30000; //testing  with 7 miles as point to refuel (measured right now in m -- smallest unit on maps for distance)
+async function determineChargingCoordinates(stepDistances, stepStart, stepEnd, make, model, year) {
+    let rangeQuery = await pool.query("SELECT maxElecRange FROM `vehicles` where make = ? AND model = ? AND year = ?",
+        [make, model, year]);
+    let maxRange = rangeQuery[0].maxElecRange ;
+    const refillDist = maxRange * 1609.34;
+    console.log("max range", maxRange);
     let milesUntilRefill = refillDist;
     let refillPlaces = [];
     let allStops = [];
@@ -313,28 +314,17 @@ async function determineChargingCoordinates(stepDistances, stepStart, stepEnd) {
         let end = new geo.LatLng(stepEnd[i].lat, stepEnd[i].lng);
         let distanceBetween = geo.computeDistanceBetween(start, end);
         totalDistance += distanceBetween;
-        // console.log("Miles until Refill", milesUntilRefill);
-        // console.log("STEP START", stepStart[i]);
-        // console.log("STEP END", stepEnd[i]);
-        // console.log("STEP DISTANCES", distanceBetween);
         allStops.push({"lat": start.latitude, "lng": start.longitude});
         if (milesUntilRefill < distanceBetween) {
-            const refillTimes = Math.floor(distanceBetween/milesUntilRefill);
             let heading = geo.computeHeading(start, end);
             let totalAccumulated = 0;
             let j = 0;
             while(totalAccumulated + milesUntilRefill <= distanceBetween){
-                // console.log("Loop iteration " + j + ": ");
-                // console.log("until refill: " + milesUntilRefill);
-                // console.log("heading:" + heading);
-                //console.log(start.latitude +",", start.longitude);
-                //console.log(end.latitude +",", end.longitude);
                 j ++;
                 let fillPosition = geo.computeOffset(start, milesUntilRefill, heading);
                 totalAccumulated += milesUntilRefill;
                 milesUntilRefill = refillDist;
                 start = fillPosition;
-                // console.log(fillPosition.latitude +",", fillPosition.longitude);
                 let nearestStation = await findNearestElectricStation(fillPosition);
                 refillPlaces.push(nearestStation);
                 allStops.push({"lat": fillPosition.latitude, "lng": fillPosition.longitude});
@@ -346,9 +336,7 @@ async function determineChargingCoordinates(stepDistances, stepStart, stepEnd) {
         }
         allStops.push({"lat": end.latitude, "lng": end.longitude});
     }
-    // console.log(refillPlaces);
-    // console.log(allStops);
-    console.log("finished determinations");
+    console.log("total distance", totalDistance);
     return {"refill_places": refillPlaces, "all_stops": allStops, "total_distance":totalDistance};
 }
 
@@ -357,19 +345,6 @@ async function findRoute(origin, destination){
     return response.json();
 }
 
-/*
-async function findNearestElectricStation(fillPosition) {
-    let response = await fetch("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+ fillPosition.lat() + "," + fillPosition.lng() +"&keyword=gas station&rankby=distance&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-    response = await response.json();
-    let coord = response.results[0].geometry.location;
-    let lat = coord.lat;
-    let lng = coord.lng;
-    let response_two = await fetch("https://maps.googleapis.com/maps/api/geocode/json?address="+ lat + "," + lng +"&key=AIzaSyBS0dJioYMOXRcWNmBeQJFSavGzPlheW2k");
-    response_two = await response_two.json();
-    const address = response_two.results[0].formatted_address;
-    return address.substring(address.length - 10, address.length - 5);
-}
- */
 
 async function findNearestElectricStation(fillPosition) {
     const keyword = "electric charging station";
